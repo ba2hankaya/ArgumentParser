@@ -196,6 +196,7 @@ namespace ArgumentParserTests
             JObject receivedJson = JObject.Parse(received);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
+            argparse.PrintHelp();
         }
     }
 }

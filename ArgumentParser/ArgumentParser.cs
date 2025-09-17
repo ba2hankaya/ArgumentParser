@@ -121,6 +121,12 @@ namespace ArgumentParserNS
                     string currentToken = inputArgs[i].Trim();
                     if (currentToken.StartsWith('-'))
                     {
+                        if(currentToken == "-h")
+                        {
+                            PrintHelp();
+                            Environment.Exit(0);
+                            return new ExpandoObject();
+                        }
                         Argument? current = argscpy.FirstOrDefault(x => x.flags.Contains(currentToken));
                         if (current == null)
                         {
@@ -217,14 +223,22 @@ namespace ArgumentParserNS
             catch (Exception ex)
             {
                 Console.WriteLine(ex.Message.ToString());
-                //Environment.Exit(1);
+                PrintHelp();
+                Environment.Exit(1);
                 return new ExpandoObject();
             }
         }
 
+        public void PrintHelp()
+        {
+            Console.WriteLine(ConstructHelpMessage());
+        }
         private string ConstructHelpMessage()
         {
             string usage = $"usage: {prog} ";
+            string descMessage = $"\n\n{desc}\n";
+            string options = "\n\noptions:\n";
+            string epilogMessage = $"\n{epilog}\n";
             foreach (Argument arg in args)
             {
                 switch (arg.parserAction)
@@ -235,17 +249,23 @@ namespace ArgumentParserNS
                     case ParserAction.take_value:
                         usage += $"[{arg.flags[0]} {arg.dest.ToUpper()}] ";
                         break;
-                    case ParserAction.store_true:
-                        usage += $"[{arg.flags[0]}] ";
-                        break;
-                    case ParserAction.store_false:
-                        usage += $"[{arg.flags[0]}] ";
-                        break;
                     default:
+                        usage += $"[{arg.flags[0]}] ";
                         break;
                 }
+
+                string flags = string.Join(", ", arg.flags);
+                if (arg.parserAction == ParserAction.positional)
+                {
+                    options += $"  {flags}\t{arg.help}\n";
+                }
+                else
+                {
+                    options += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                }
             }
-            return usage;
+            string final = usage + descMessage + options + epilogMessage;
+            return final;
         }
         private object ParseBestGuess(string s)
         {
