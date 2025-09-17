@@ -22,7 +22,7 @@ namespace ArgumentParserTests
             argparse.AddArgument("-a");
             dynamic expando = argparse.ArgParse(["-a", "312"]);
 
-            string expected = "{\"a\":\"312\"}";
+            string expected = "{\"a\":312}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -38,7 +38,7 @@ namespace ArgumentParserTests
             argparse.AddArgument("-f", "--foo");
             dynamic expando = argparse.ArgParse(["-f", "312"]);
 
-            string expected = "{\"foo\":\"312\"}";
+            string expected = "{\"foo\":312}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -55,7 +55,7 @@ namespace ArgumentParserTests
             argparse.AddArgument("-b");
             dynamic expando = argparse.ArgParse(["-f", "312", "-b", "stringVal"]);
 
-            string expected = "{\"f\":\"312\",\"b\":\"stringVal\"}";
+            string expected = "{\"f\":312,\"b\":\"stringVal\"}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -72,7 +72,7 @@ namespace ArgumentParserTests
             argparse.AddArgument("-b", "--bar");
             dynamic expando = argparse.ArgParse(["--bar", "312", "-f", "stringVal"]);
 
-            string expected = "{\"bar\":\"312\",\"foo\":\"stringVal\"}";
+            string expected = "{\"bar\":312,\"foo\":\"stringVal\"}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -166,7 +166,7 @@ namespace ArgumentParserTests
             dynamic expando = argparse.ArgParse("127.0.0.1 -p 4444 -v --make-false".Split());
 
 
-            string expected = "{\"ipaddr\":\"127.0.0.1\",\"port\":\"4444\",\"verbose\":true,\"make_false\":false}";
+            string expected = "{\"ipaddr\":\"127.0.0.1\",\"port\":4444,\"verbose\":true,\"make_false\":false}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -185,11 +185,11 @@ namespace ArgumentParserTests
                 .WithParserAction(ParserAction.store_false);
             argparse.AddArgument("ipaddr");
             argparse.AddArgument("-p", "--port")
-                .WithDefault("4444");
+                .WithDefault(4444);
 
             dynamic expando = argparse.ArgParse("127.0.0.1 -v --make-false".Split());
 
-            string expected = "{\"ipaddr\":\"127.0.0.1\",\"port\":\"4444\",\"verbose\":true,\"make_false\":false}";
+            string expected = "{\"ipaddr\":\"127.0.0.1\",\"port\":4444,\"verbose\":true,\"make_false\":false}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);

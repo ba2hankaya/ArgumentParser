@@ -133,9 +133,9 @@ namespace ArgumentParserNS
                                 {
                                     throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
                                 }
-                                string value = inputArgs[i + 1];
+                                string strvalue = inputArgs[i + 1];
 
-                                if (value == "" || value[0] == '-')
+                                if (strvalue == "" || strvalue[0] == '-')
                                 {
                                     throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
                                 }
@@ -143,13 +143,14 @@ namespace ArgumentParserNS
                                 {
                                     try
                                     {
-                                        Convert.ChangeType(value, current.valueType);
+                                        Convert.ChangeType(strvalue, current.valueType);
                                     }
                                     catch
                                     {
                                         throw new FormatException($"Value type doesn't match entered value for flag {currentToken}");
                                     }
                                 }
+                                object value = ParseBestGuess(strvalue);
                                 keyValuePairs.Add(current.dest, value);
                                 i++;
                                 argscpy.Remove(current);
@@ -215,12 +216,13 @@ namespace ArgumentParserNS
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.ToString());
-                throw new Exception("Bad argument.");
+                Console.WriteLine(ex.Message.ToString());
+                //Environment.Exit(1);
+                return new ExpandoObject();
             }
         }
 
-        public string ConstructHelpMessage()
+        private string ConstructHelpMessage()
         {
             string usage = $"usage: {prog} ";
             foreach (Argument arg in args)
@@ -245,5 +247,15 @@ namespace ArgumentParserNS
             }
             return usage;
         }
+        private object ParseBestGuess(string s)
+        {
+            if (int.TryParse(s, out var i)) return i;
+            if (double.TryParse(s, out var d)) return d;
+            if (bool.TryParse(s, out var b)) return b;
+            if (DateTime.TryParse(s, out var dt)) return dt;
+            return s; // fallback: keep as string
+        }
     }
+
+    
 }
