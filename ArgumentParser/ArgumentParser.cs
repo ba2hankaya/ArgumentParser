@@ -28,6 +28,7 @@ namespace ArgumentParserNS
             public Type? valueType = null;
             public Object? value = null;
             public bool isRequired = false;
+            public bool isUserRequired = false;
             public bool nargs = false;
             string longFlagPattern = @"(^--)";
             string shortFlagPattern = @"(^-[^-])";
@@ -111,6 +112,7 @@ namespace ArgumentParserNS
             public ArgumentBuilder WithRequired()
             {
                 _arg.isRequired = true;
+                _arg.isUserRequired = true;
                 return this;
             }
         }
@@ -119,9 +121,10 @@ namespace ArgumentParserNS
         List<Argument> args = new();
 
         IDictionary<string, object> keyValuePairs = new Dictionary<string, object>();
-        public ArgumentParser(string prog, string desc, string epilog)
+        public ArgumentParser(string prog = "", string desc = "", string epilog = "")
         {
             this.prog = prog;
+            if(prog == "") { this.prog = System.AppDomain.CurrentDomain.FriendlyName; }
             this.desc = desc;
             this.epilog = epilog;
         }
@@ -274,9 +277,12 @@ namespace ArgumentParserNS
         private string ConstructHelpMessage()
         {
             string usage = $"usage: {prog} ";
-            string descMessage = $"\n\n{desc}\n";
-            string options = "\n\noptions:\n";
-            string epilogMessage = $"\n{epilog}\n";
+            
+            string descMessage = desc == "" ? "\n" : $"\n{desc}\n";
+            string requiredOptions = "\nrequired options:\n";
+            int requiredOptionsInitialLength = requiredOptions.Length;
+            string options = "\noptions:\n";
+            string epilogMessage = epilog == "" ? "" : $"\n{epilog}\n";
             foreach (Argument arg in args)
             {
                 switch (arg.parserAction)
@@ -295,14 +301,29 @@ namespace ArgumentParserNS
                 string flags = string.Join(", ", arg.flags);
                 if (arg.parserAction == ParserAction.positional)
                 {
-                    options += $"  {flags}\t{arg.help}\n";
+                    if (arg.isUserRequired)
+                    {
+                        requiredOptions += $"  {flags}\t{arg.help}\n";
+                    }
+                    else
+                    {
+                        options += $"  {flags}\t{arg.help}\n";
+                    }
                 }
                 else
                 {
-                    options += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                    if (arg.isUserRequired)
+                    {
+                        requiredOptions += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                    }
+                    else
+                    {
+                        options += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                    }
+                    
                 }
             }
-            string final = usage + descMessage + options + epilogMessage;
+            string final = usage + descMessage + (requiredOptionsInitialLength == requiredOptions.Length ? "" : requiredOptions) + options + epilogMessage;
             return final;
         }
         private object ParseBestGuess(string s)
