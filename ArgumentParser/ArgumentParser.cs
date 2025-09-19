@@ -28,6 +28,7 @@ namespace ArgumentParserNS
             public Type? valueType = null;
             public Object? value = null;
             public bool isRequired = false;
+            public bool nargs = false;
             string longFlagPattern = @"(^--)";
             string shortFlagPattern = @"(^-[^-])";
 
@@ -101,6 +102,12 @@ namespace ArgumentParserNS
                 return this;
             }
 
+            public ArgumentBuilder WithNargs()
+            {
+                _arg.nargs = true;
+                return this;
+            }
+
             public ArgumentBuilder WithRequired()
             {
                 _arg.isRequired = true;
@@ -132,7 +139,7 @@ namespace ArgumentParserNS
                         if(currentToken == "-h")
                         {
                             PrintHelp();
-                            Environment.Exit(0);
+                            //Environment.Exit(0);
                             return new ExpandoObject();
                         }
                         Argument? current = argscpy.FirstOrDefault(x => x.flags.Contains(currentToken));
@@ -147,12 +154,27 @@ namespace ArgumentParserNS
                                 {
                                     throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
                                 }
-                                string strvalue = inputArgs[i + 1];
+
+                                i++;
+                                string strvalue = inputArgs[i];
 
                                 if (strvalue == "" || strvalue[0] == '-')
                                 {
                                     throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
                                 }
+
+                                if (current.nargs)
+                                {
+                                    List<string> strvalues = new List<string>();
+                                    strvalues.Add(strvalue);
+                                    while (i + 1 < inputArgs.Length && !inputArgs[i + 1].StartsWith("-"))
+                                    {
+                                        strvalues.Add(inputArgs[i + 1]);
+                                        i++;
+                                    }
+                                    strvalue = string.Join(" ", strvalues);
+                                }
+
                                 if (current.valueType != null)
                                 {
                                     try
@@ -166,7 +188,6 @@ namespace ArgumentParserNS
                                 }
                                 object value = ParseBestGuess(strvalue);
                                 keyValuePairs.Add(current.dest, value);
-                                i++;
                                 argscpy.Remove(current);
                                 break;
                             case ParserAction.store_true:
