@@ -27,6 +27,7 @@ namespace ArgumentParserNS
             public ParserAction parserAction = ParserAction.take_value;
             public Type? valueType = null;
             public Object? value = null;
+            public bool isRequired = false;
             string longFlagPattern = @"(^--)";
             string shortFlagPattern = @"(^-[^-])";
 
@@ -96,6 +97,13 @@ namespace ArgumentParserNS
                 {
                     throw new ArgumentException($"Value type and default values don't match.");
                 }
+                _arg.isRequired = true;
+                return this;
+            }
+
+            public ArgumentBuilder WithRequired()
+            {
+                _arg.isRequired = true;
                 return this;
             }
         }
@@ -192,14 +200,23 @@ namespace ArgumentParserNS
                     switch (argument.parserAction)
                     {
                         case ParserAction.positional:
-                            throw new FormatException($"The positional argument {argument.flags[0]} was never given.");
+                            if (argument.isRequired)
+                            {
+                                throw new FormatException($"The positional argument {argument.flags[0]} was never given.");
+                            }
                             break;
                         case ParserAction.take_value:
                             if (argument.value == null) //if a default value wasn't provided
                             {
-                                throw new FormatException($"A value wasn't passed with the {argument.flags[0]} flag.");
+                                if (argument.isRequired)
+                                {
+                                    throw new FormatException($"A value wasn't passed with the {argument.flags[0]} flag.");
+                                }
                             }
-                            keyValuePairs.Add(argument.dest, argument.value);
+                            else
+                            {
+                                keyValuePairs.Add(argument.dest, argument.value);
+                            }
                             break;
                         case ParserAction.store_true:
                             keyValuePairs.Add(argument.dest, false);
@@ -224,7 +241,7 @@ namespace ArgumentParserNS
             {
                 Console.WriteLine(ex.Message.ToString());
                 PrintHelp();
-                Environment.Exit(1);
+                //Environment.Exit(1);
                 return new ExpandoObject();
             }
         }
