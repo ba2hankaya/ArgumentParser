@@ -11,15 +11,22 @@ namespace ArgumentParserTests
         [TestMethod]
         public void EmptyInputTest()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f");
-            dynamic expando = argparse.ArgParse([""]);
+            dynamic expando = argparse.ArgParse([]);
+            string expected = JsonConvert.SerializeObject(new ExpandoObject());
+            JObject expectedJson = JObject.Parse(expected);
+
+            string received = JsonConvert.SerializeObject(expando);
+            JObject receivedJson = JObject.Parse(received);
+
+            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
         }
 
         [TestMethod]
         public void TakeValueFlagSingle()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-a");
             dynamic expando = argparse.ArgParse(["-a", "312"]);
 
@@ -35,7 +42,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void TakeValueFlagSingleWithLong()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--foo");
             dynamic expando = argparse.ArgParse(["-f", "312"]);
 
@@ -51,7 +58,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void TakeValueFlagMultiple()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f");
             argparse.AddArgument("-b");
             dynamic expando = argparse.ArgParse(["-f", "312", "-b", "stringVal"]);
@@ -68,7 +75,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void TakeValueFlagMultipleWithLong()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--foo");
             argparse.AddArgument("-b", "--bar");
             dynamic expando = argparse.ArgParse(["--bar", "312", "-f", "stringVal"]);
@@ -85,7 +92,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void PositionalFlagSingle()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("foo");
             dynamic expando = argparse.ArgParse(["input"]);
 
@@ -101,7 +108,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void PositionalFlagMultiple()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("foo");
             argparse.AddArgument("bar");
             dynamic expando = argparse.ArgParse(["input", "input2"]);
@@ -118,7 +125,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void StoreTrueFalse()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--foo")
                 .WithParserAction(ParserAction.store_true);
             argparse.AddArgument("-b", "--bar")
@@ -137,7 +144,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void StoreTrueFalse2()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--foo")
                 .WithParserAction(ParserAction.store_true);
             argparse.AddArgument("-b", "--bar")
@@ -156,7 +163,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void Mixed() 
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-v", "--verbose")
                 .WithParserAction(ParserAction.store_true);
             argparse.AddArgument("--make-false")
@@ -179,7 +186,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void Mixed2()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-v", "--verbose")
                 .WithParserAction(ParserAction.store_true);
             argparse.AddArgument("--make-false")
@@ -197,13 +204,12 @@ namespace ArgumentParserTests
             JObject receivedJson = JObject.Parse(received);
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
-            argparse.PrintHelp();
         }
 
         [TestMethod]
         public void Required()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-v", "--verbose")
                 .WithParserAction(ParserAction.store_true);
             argparse.AddArgument("-p", "--port").WithRequired();
@@ -224,7 +230,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void Nargs1()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--files")
                 .WithNargs();
 
@@ -243,7 +249,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void Nargs2()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--files")
                 .WithNargs();
             argparse.AddArgument("-c");
@@ -263,7 +269,7 @@ namespace ArgumentParserTests
         [TestMethod]
         public void Nargs3()
         {
-            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            ArgumentParser argparse = new ArgumentParser();
             argparse.AddArgument("-f", "--files")
                 .WithNargs();
             argparse.AddArgument("-c");
