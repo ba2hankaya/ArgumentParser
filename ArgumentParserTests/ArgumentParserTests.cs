@@ -1,6 +1,7 @@
 ﻿using ArgumentParserNS;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Dynamic;
 
 namespace ArgumentParserTests
 {
@@ -197,6 +198,87 @@ namespace ArgumentParserTests
 
             Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
             argparse.PrintHelp();
+        }
+
+        [TestMethod]
+        public void Required()
+        {
+            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            argparse.AddArgument("-v", "--verbose")
+                .WithParserAction(ParserAction.store_true);
+            argparse.AddArgument("-p", "--port").WithRequired();
+            argparse.AddArgument("-f", "--fast");
+
+            dynamic expando = argparse.ArgParse("-f 4444 -v".Split());
+
+
+            string expected = JsonConvert.SerializeObject(new ExpandoObject());
+            JObject expectedJson = JObject.Parse(expected);
+
+            string received = JsonConvert.SerializeObject(expando);
+            JObject receivedJson = JObject.Parse(received);
+
+            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
+        }
+
+        [TestMethod]
+        public void Nargs1()
+        {
+            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            argparse.AddArgument("-f", "--files")
+                .WithNargs();
+
+            dynamic expando = argparse.ArgParse("-f file1 file2 file3".Split());
+
+
+            string expected = "{\"files\":\"file1 file2 file3\"}";
+            JObject expectedJson = JObject.Parse(expected);
+
+            string received = JsonConvert.SerializeObject(expando);
+            JObject receivedJson = JObject.Parse(received);
+
+            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
+        }
+
+        [TestMethod]
+        public void Nargs2()
+        {
+            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            argparse.AddArgument("-f", "--files")
+                .WithNargs();
+            argparse.AddArgument("-c");
+
+            dynamic expando = argparse.ArgParse("-f file1 file2 file3 -c 5".Split());
+
+
+            string expected = "{\"files\":\"file1 file2 file3\",\"c\":5}";
+            JObject expectedJson = JObject.Parse(expected);
+
+            string received = JsonConvert.SerializeObject(expando);
+            JObject receivedJson = JObject.Parse(received);
+
+            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
+        }
+
+        [TestMethod]
+        public void Nargs3()
+        {
+            ArgumentParser argparse = new ArgumentParser("p", "d", "e");
+            argparse.AddArgument("-f", "--files")
+                .WithNargs();
+            argparse.AddArgument("-c");
+            argparse.AddArgument("pos");
+
+            dynamic expando = argparse.ArgParse("posArg -f file1 file2 file3 -c 5".Split());
+
+
+            string expected = "{\"pos\":\"posArg\",\"files\":\"file1 file2 file3\",\"c\":5}";
+            JObject expectedJson = JObject.Parse(expected);
+
+            string received = JsonConvert.SerializeObject(expando);
+            JObject receivedJson = JObject.Parse(received);
+
+            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
         }
     }
 }
