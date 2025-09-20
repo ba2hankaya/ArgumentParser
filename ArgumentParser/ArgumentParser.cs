@@ -129,7 +129,7 @@ namespace ArgumentParserNS
             this.epilog = epilog;
         }
 
-        public ExpandoObject ArgParse(in string[] inputArgs)
+        public ExpandoObject ArgParse(string[] inputArgs)
         {
             try
             {
@@ -178,19 +178,23 @@ namespace ArgumentParserNS
                                     strvalue = string.Join(" ", strvalues);
                                 }
 
+                                object valueobj;
                                 if (current.valueType != null)
                                 {
                                     try
                                     {
-                                        Convert.ChangeType(strvalue, current.valueType);
+                                        valueobj = Convert.ChangeType(strvalue, current.valueType);
                                     }
                                     catch
                                     {
                                         throw new FormatException($"Value type doesn't match entered value for flag {currentToken}");
                                     }
                                 }
-                                object value = ParseBestGuess(strvalue);
-                                keyValuePairs.Add(current.dest, value);
+                                else
+                                {
+                                    valueobj = ParseBestGuess(strvalue);
+                                }
+                                keyValuePairs.Add(current.dest, valueobj);
                                 argscpy.Remove(current);
                                 break;
                             case ParserAction.store_true:
@@ -333,6 +337,11 @@ namespace ArgumentParserNS
             if (bool.TryParse(s, out var b)) return b;
             if (DateTime.TryParse(s, out var dt)) return dt;
             return s; // fallback: keep as string
+        }
+
+        public static bool HasProperty(ExpandoObject obj, string propertyName)
+        {
+            return obj != null && ((IDictionary<String, object?>)obj).ContainsKey(propertyName);
         }
     }
 
