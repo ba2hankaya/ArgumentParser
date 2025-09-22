@@ -119,8 +119,6 @@ namespace ArgumentParserNS
 
         string prog, desc, epilog;
         List<Argument> args = new();
-
-        IDictionary<string, object> keyValuePairs = new Dictionary<string, object>();
         public ArgumentParser(string prog = "", string desc = "", string epilog = "")
         {
             this.prog = prog;
@@ -131,8 +129,10 @@ namespace ArgumentParserNS
 
         public ExpandoObject ArgParse(string[] inputArgs)
         {
+            
             try
             {
+                ExpandoObject expando = new ExpandoObject();
                 List<Argument> argscpy = args.ToList();
                 for (int i = 0; i < inputArgs.Length; i++)
                 {
@@ -194,15 +194,15 @@ namespace ArgumentParserNS
                                 {
                                     valueobj = ParseBestGuess(strvalue);
                                 }
-                                keyValuePairs.Add(current.dest, valueobj);
+                                expando.TryAdd(current.dest, valueobj);
                                 argscpy.Remove(current);
                                 break;
                             case ParserAction.store_true:
-                                keyValuePairs.Add(current.dest, true);
+                                expando.TryAdd(current.dest, true);
                                 argscpy.Remove(current);
                                 break;
                             case ParserAction.store_false:
-                                keyValuePairs.Add(current.dest, false);
+                                expando.TryAdd(current.dest, false);
                                 argscpy.Remove(current);
                                 break;
                         }
@@ -218,7 +218,7 @@ namespace ArgumentParserNS
                         {
                             throw new FormatException($"Couldn't parse arguments, check for whitespaces.");
                         }
-                        keyValuePairs.Add(current.dest, currentToken);
+                        expando.TryAdd(current.dest, currentToken);
                         argscpy.Remove(current);
                     }
                 }
@@ -243,19 +243,17 @@ namespace ArgumentParserNS
                             }
                             else
                             {
-                                keyValuePairs.Add(argument.dest, argument.value);
+                                expando.TryAdd(argument.dest, argument.value);
                             }
                             break;
                         case ParserAction.store_true:
-                            keyValuePairs.Add(argument.dest, false);
+                            expando.TryAdd(argument.dest, false);
                             break;
                         case ParserAction.store_false:
-                            keyValuePairs.Add(argument.dest, true);
+                            expando.TryAdd(argument.dest, true);
                             break;
                     }
                 }
-                string serialized = JsonConvert.SerializeObject(keyValuePairs);
-                dynamic? expando = JsonConvert.DeserializeObject<ExpandoObject>(serialized, new ExpandoObjectConverter());
                 if ((object?)expando != null)
                 {
                     return expando;
