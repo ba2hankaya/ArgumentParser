@@ -119,16 +119,30 @@ namespace ArgumentParserNS
 
         string prog, desc, epilog;
         List<Argument> args = new();
-        public ArgumentParser(string prog = "", string desc = "", string epilog = "")
+        bool implementHelp;
+        public ArgumentParser(string prog = "", string desc = "", string epilog = "", bool implementHelp = false)
         {
             this.prog = prog;
             if(prog == "") { this.prog = System.AppDomain.CurrentDomain.FriendlyName; }
             this.desc = desc;
             this.epilog = epilog;
+            this.implementHelp = implementHelp;
         }
 
         public ExpandoObject ArgParse(string[] inputArgs)
         {
+            Action ifHelpFlagPresentPrintHelpExit = () => 
+            {
+                Argument? helpArg = args.FirstOrDefault(x => x.flags.Contains("-h") || x.flags.Contains("--help"));
+                if (helpArg != null)
+                {
+                    Console.WriteLine(ConstructHelpMessage());
+                    Environment.Exit(0);
+                }
+            };
+
+            if (implementHelp) { ifHelpFlagPresentPrintHelpExit(); }
+
             try
             {
                 ExpandoObject expando = new ExpandoObject();
