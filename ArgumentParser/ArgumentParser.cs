@@ -129,7 +129,6 @@ namespace ArgumentParserNS
 
         public ExpandoObject ArgParse(string[] inputArgs)
         {
-            
             try
             {
                 ExpandoObject expando = new ExpandoObject();
@@ -139,12 +138,6 @@ namespace ArgumentParserNS
                     string currentToken = inputArgs[i].Trim();
                     if (currentToken.StartsWith('-'))
                     {
-                        if(currentToken == "-h")
-                        {
-                            PrintHelp();
-                            //Environment.Exit(0);
-                            return new ExpandoObject();
-                        }
                         Argument? current = argscpy.FirstOrDefault(x => x.flags.Contains(currentToken));
                         if (current == null)
                         {
@@ -254,27 +247,22 @@ namespace ArgumentParserNS
                             break;
                     }
                 }
-                if ((object?)expando != null)
-                {
-                    return expando;
-                }
-                else
-                {
-                    throw new Exception("No arguments passed to the arg parser.");
-                }
+                return expando;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message.ToString());
-                PrintHelp();
+                //Console.WriteLine(ex.Message.ToString());
+                //PrintHelp();
                 //Environment.Exit(1);
-                return new ExpandoObject();
+                ExpandoObject expando = new ExpandoObject();
+                expando.TryAdd("err_msg", ex.Message.ToString());
+                return expando;
             }
         }
 
-        public void PrintHelp()
+        public string GetHelpMessage()
         {
-            Console.WriteLine(ConstructHelpMessage());
+            return ConstructHelpMessage();
         }
         private string ConstructHelpMessage()
         {
@@ -316,11 +304,27 @@ namespace ArgumentParserNS
                 {
                     if (arg.isUserRequired)
                     {
-                        requiredOptions += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                        switch (arg.parserAction)
+                        {
+                            case ParserAction.take_value:
+                                requiredOptions += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                                break;
+                            default:
+                                requiredOptions += $"  {flags} \t{arg.help}";
+                                break;
+                        }
                     }
                     else
                     {
-                        options += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                        switch (arg.parserAction)
+                        {
+                            case ParserAction.take_value:
+                                options += $"  {flags} {arg.dest.ToUpper()}\t{arg.help}\n";
+                                break;
+                            default:
+                                options += $"  {flags} \t{arg.help}\n";
+                                break;
+                        }
                     }
                     
                 }
@@ -336,7 +340,6 @@ namespace ArgumentParserNS
             if (DateTime.TryParse(s, out var dt)) return dt;
             return s; // fallback: keep as string
         }
-
         public static bool HasProperty(ExpandoObject obj, string propertyName)
         {
             return obj != null && ((IDictionary<String, object?>)obj).ContainsKey(propertyName);
