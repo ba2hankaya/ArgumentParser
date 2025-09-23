@@ -131,7 +131,7 @@ namespace ArgumentParserNS
 
         public ExpandoObject ArgParse(string[] inputArgs)
         {
-            Action ifHelpFlagPresentPrintHelpExit = () => 
+            if (implementHelp)
             {
                 Argument? helpArg = args.FirstOrDefault(x => x.flags.Contains("-h") || x.flags.Contains("--help"));
                 if (helpArg != null)
@@ -139,9 +139,7 @@ namespace ArgumentParserNS
                     Console.WriteLine(ConstructHelpMessage());
                     Environment.Exit(0);
                 }
-            };
-
-            if (implementHelp) { ifHelpFlagPresentPrintHelpExit(); }
+            }
 
             try
             {
@@ -150,127 +148,144 @@ namespace ArgumentParserNS
                 for (int i = 0; i < inputArgs.Length; i++)
                 {
                     string currentToken = inputArgs[i].Trim();
+                    Argument? current;
+                    KeyValuePair<string, object> keyValuePair;
+
+                    if (currentToken == "")
+                    {
+                        throw new FormatException($"Couldn't parse arguments, check for whitespaces.");
+                    }
+
                     if (currentToken.StartsWith('-'))
                     {
-                        Argument? current = argscpy.FirstOrDefault(x => x.flags.Contains(currentToken));
-                        if (current == null)
+                        current = argscpy.FirstOrDefault(x => x.flags.Contains(currentToken));
+                        if(current == null)
                         {
-                            throw new FormatException($"There are no flags corresponding to '{currentToken}'.");
+                            throw new FormatException($"Unrecognized flag: {currentToken}");
                         }
-                        switch (current.parserAction)
-                        {
-                            case ParserAction.take_value:
-                                if (i + 1 >= inputArgs.Length)
-                                {
-                                    throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
-                                }
-
-                                i++;
-                                string strvalue = inputArgs[i];
-
-                                if (strvalue == "" || strvalue[0] == '-')
-                                {
-                                    throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
-                                }
-
-                                if (current.nargs)
-                                {
-                                    List<string> strvalues = new List<string>();
-                                    strvalues.Add(strvalue);
-                                    while (i + 1 < inputArgs.Length && !inputArgs[i + 1].StartsWith("-"))
-                                    {
-                                        strvalues.Add(inputArgs[i + 1]);
-                                        i++;
-                                    }
-                                    strvalue = string.Join(" ", strvalues);
-                                }
-
-                                object valueobj;
-                                if (current.valueType != null)
-                                {
-                                    try
-                                    {
-                                        valueobj = Convert.ChangeType(strvalue, current.valueType);
-                                    }
-                                    catch
-                                    {
-                                        throw new FormatException($"Value type doesn't match entered value for flag {currentToken}");
-                                    }
-                                }
-                                else
-                                {
-                                    valueobj = ParseBestGuess(strvalue);
-                                }
-                                expando.TryAdd(current.dest, valueobj);
-                                argscpy.Remove(current);
-                                break;
-                            case ParserAction.store_true:
-                                expando.TryAdd(current.dest, true);
-                                argscpy.Remove(current);
-                                break;
-                            case ParserAction.store_false:
-                                expando.TryAdd(current.dest, false);
-                                argscpy.Remove(current);
-                                break;
-                        }
+                        keyValuePair = HandleFlag(current, inputArgs, ref i, currentToken);
                     }
                     else
                     {
-                        Argument? current = argscpy.FirstOrDefault(x => x.parserAction == ParserAction.positional);
-                        if (current == null)
+                        current = argscpy.FirstOrDefault(x => x.parserAction == ParserAction.positional);
+                        if(current == null)
                         {
-                            throw new FormatException($"Couldn't parse argument: '{currentToken}'");
+                            throw new FormatException($"Unexpected token: {currentToken}");
                         }
-                        if (currentToken == "")
-                        {
-                            throw new FormatException($"Couldn't parse arguments, check for whitespaces.");
-                        }
-                        expando.TryAdd(current.dest, currentToken);
-                        argscpy.Remove(current);
+                        keyValuePair = new KeyValuePair<string, object>(current.dest, currentToken);
                     }
+                    expando.TryAdd(keyValuePair.Key, keyValuePair.Value);
+                    argscpy.Remove(current);
                 }
 
-                foreach (Argument argument in argscpy)
-                {
-                    switch (argument.parserAction)
-                    {
-                        case ParserAction.positional:
-                            if (argument.isRequired)
-                            {
-                                throw new FormatException($"The positional argument {argument.flags[0]} was never given.");
-                            }
-                            break;
-                        case ParserAction.take_value:
-                            if (argument.value == null) //if a default value wasn't provided
-                            {
-                                if (argument.isRequired)
-                                {
-                                    throw new FormatException($"A value wasn't passed with the {argument.flags[0]} flag.");
-                                }
-                            }
-                            else
-                            {
-                                expando.TryAdd(argument.dest, argument.value);
-                            }
-                            break;
-                        case ParserAction.store_true:
-                            expando.TryAdd(argument.dest, false);
-                            break;
-                        case ParserAction.store_false:
-                            expando.TryAdd(argument.dest, true);
-                            break;
-                    }
-                }
+                HandleRemaining(argscpy, expando);
                 return expando;
             }
             catch (Exception ex)
             {
-                //Console.WriteLine(ex.Message.ToString());
-                //PrintHelp();
-                //Environment.Exit(1);
                 ExpandoObject expando = new ExpandoObject();
                 expando.TryAdd("err_msg", ex.Message.ToString());
                 return expando;
+            }
+        }
+
+        private KeyValuePair<string, object> HandleFlag(Argument current, string[] inputArgs, ref int i, string currentToken)
+        {
+            KeyValuePair<string, object> keyValuePair;
+            switch (current.parserAction)
+            {
+                case ParserAction.take_value:
+                    if (i + 1 >= inputArgs.Length)
+                    {
+                        throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
+                    }
+
+                    i++;
+                    string strvalue = inputArgs[i];
+
+                    if (strvalue == "" || strvalue[0] == '-')
+                    {
+                        throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
+                    }
+
+                    object valueobj;
+
+                    if (current.nargs)
+                    {
+                        List<string> strvalues = new List<string>();
+                        strvalues.Add(strvalue);
+                        while (i + 1 < inputArgs.Length && !inputArgs[i + 1].StartsWith("-"))
+                        {
+                            strvalues.Add(inputArgs[i + 1]);
+                            i++;
+                        }
+                        valueobj = strvalues;
+                        keyValuePair = new KeyValuePair<string, object>(current.dest, valueobj);
+                        break;
+                    }
+
+
+                    if (current.valueType != null)
+                    {
+                        try
+                        {
+                            valueobj = Convert.ChangeType(strvalue, current.valueType);
+                        }
+                        catch
+                        {
+                            throw new FormatException($"Value type doesn't match entered value for flag {currentToken}");
+                        }
+                    }
+                    else
+                    {
+                        valueobj = ParseBestGuess(strvalue);
+                    }
+                    keyValuePair = new KeyValuePair<string, object>(current.dest, valueobj);
+                    break;
+                case ParserAction.store_true:
+                    keyValuePair = new KeyValuePair<string, object>(current.dest, true);
+                    break;
+                case ParserAction.store_false:
+                    keyValuePair = new KeyValuePair<string, object>(current.dest, false);
+                    break;
+                default:
+                    throw new ArgumentException("Flagged arguments can't be positional.");
+            }
+            return keyValuePair;
+        }
+
+        private void HandleRemaining(List<Argument> remaining, ExpandoObject expando)
+        {
+            foreach (Argument argument in remaining)
+            {
+                switch (argument.parserAction)
+                {
+                    case ParserAction.positional:
+                        if (argument.isRequired)
+                        {
+                            throw new FormatException($"The positional argument {argument.flags[0]} was never given.");
+                        }
+                        break;
+                    case ParserAction.take_value:
+                        if (argument.value == null) //if a default value wasn't provided
+                        {
+                            if (argument.isRequired)
+                            {
+                                throw new FormatException($"A value wasn't passed with the {argument.flags[0]} flag.");
+                            }
+                        }
+                        else
+                        {
+                            expando.TryAdd(argument.dest, argument.value);
+                        }
+                        break;
+                    case ParserAction.store_true:
+                        expando.TryAdd(argument.dest, false);
+                        break;
+                    case ParserAction.store_false:
+                        expando.TryAdd(argument.dest, true);
+                        break;
+                }
             }
         }
 
