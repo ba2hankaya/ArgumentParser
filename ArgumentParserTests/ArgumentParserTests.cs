@@ -217,14 +217,7 @@ namespace ArgumentParserTests
 
             dynamic expando = argparse.ArgParse("-f 4444 -v".Split());
 
-
-            string expected = JsonConvert.SerializeObject(new ExpandoObject());
-            JObject expectedJson = JObject.Parse(expected);
-
-            string received = JsonConvert.SerializeObject(expando);
-            JObject receivedJson = JObject.Parse(received);
-
-            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
+            Assert.IsTrue(ArgumentParser.HasProperty(expando, "err_msg"));
         }
 
         [TestMethod]
