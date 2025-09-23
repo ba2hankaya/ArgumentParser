@@ -4,7 +4,7 @@ This project is a library for parsing command line arguments passed to the app. 
 
 ## Usage:
 
-Initialize an ArgumentParser object, then add arguments to it similar to the python argparse module. Then parse a list of strings with the ArgParse method which returns an expando object. A difference in this class is that argument parameters aren't taken in a single constructor method but instead via the builder pattern. I preffered the builder pattern because I think it makes the syntax for both the user and the developer of the library clearer. An example of usage is below:
+Initialize an ArgumentParser object, then add arguments to it similar to the python argparse module. Then parse a list of strings with the ArgParse method which returns an expando object. A difference in this class is that argument parameters aren't taken in a single constructor method but instead via the builder pattern. I preferred the builder pattern because I think it makes the syntax for both the user and the developer of the library clearer. An example of usage is below:
 
 ```
 
@@ -35,6 +35,9 @@ if(expando.verbose == true){
 //Any values passed with a flag will try to be parsed to int, double, bool, DateTime in order. if non are valid, the value will be returned as a string.
 
 ```
+
+> [!IMPORTANT]
+> If an error is occured during parsing due to user input, an expando object with only "err_msg" property will be returned. Use `ArgumentParser.HasProperty(expando, "err_msg") == true` to see if user input was valid.
 
 More examples are present in the ArgumentParserTests/ArgumentParserTests.cs
 
