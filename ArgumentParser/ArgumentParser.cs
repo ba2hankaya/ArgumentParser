@@ -249,9 +249,9 @@ namespace ArgumentParserNS
                                     i++;
                                 }
                             }
-                            catch
+                            catch (Exception ex) when (ex is OverflowException || ex is FormatException || ex is InvalidCastException)
                             {
-                                throw new ArgumentParseException($"Value type of argument {strvalue} doesn't match expected type({current.valueType.Name}) for flag {currentToken}.");
+                                throw new ArgumentParseException($"Value {strvalue} couldn't be converted to ({current.valueType.Name}) for flag {currentToken}. Exception: {ex}");
                             }
                         }
                         else
@@ -277,9 +277,9 @@ namespace ArgumentParserNS
                         {
                             valueobj = Convert.ChangeType(strvalue, current.valueType);
                         }
-                        catch
+                        catch (Exception ex) when (ex is OverflowException || ex is FormatException || ex is InvalidCastException)
                         {
-                            throw new ArgumentParseException($"Value type of argument {strvalue} doesn't match entered value for flag {currentToken}");
+                            throw new ArgumentParseException($"Value {strvalue} couldn't be converted to ({current.valueType.Name}) for flag {currentToken}. Exception: {ex}");
                         }
                     }
                     else
