@@ -131,8 +131,7 @@ namespace ArgumentParserNS
 
             if (implementHelp)
             {
-                Argument? helpArg = args.FirstOrDefault(x => x.flags.Contains("-h") || x.flags.Contains("--help"));
-                if (helpArg != null)
+                if (inputArgs.Contains("-h") || inputArgs.Contains("--help"))
                 {
                     Console.WriteLine(ConstructHelpMessage());
                     Environment.Exit(0);
@@ -151,7 +150,7 @@ namespace ArgumentParserNS
 
                     if (currentToken == "")
                     {
-                        throw new FormatException($"Couldn't parse arguments, check for whitespaces.");
+                        throw new ArgumentParseException($"Couldn't parse arguments, check for whitespaces.");
                     }
 
                     if (currentToken.StartsWith('-'))
@@ -159,7 +158,7 @@ namespace ArgumentParserNS
                         current = argumentObjectsForParsingCopy.FirstOrDefault(x => x.flags.Contains(currentToken));
                         if(current == null)
                         {
-                            throw new FormatException($"Unrecognized flag: {currentToken}");
+                            throw new ArgumentParseException($"Unrecognized flag: {currentToken}");
                         }
                         keyValuePair = HandleFlag(current, inputArgs, ref i, currentToken);
                     }
@@ -168,7 +167,7 @@ namespace ArgumentParserNS
                         current = argumentObjectsForParsingCopy.FirstOrDefault(x => x.parserAction == ParserAction.positional);
                         if(current == null)
                         {
-                            throw new FormatException($"Unexpected token: {currentToken}");
+                            throw new ArgumentParseException($"Unexpected token: {currentToken}");
                         }
                         keyValuePair = new KeyValuePair<string, object>(current.dest, currentToken);
                     }
@@ -221,15 +220,15 @@ namespace ArgumentParserNS
                 case ParserAction.take_value:
                     if (i + 1 >= inputArgs.Length)
                     {
-                        throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
+                        throw new ArgumentParseException($"There isn't a value after value flag '{currentToken}'.");
                     }
 
                     i++;
                     string strvalue = inputArgs[i];
 
-                    if (strvalue == "" || strvalue[0] == '-')
+                    if (strvalue == "" || strvalue.StartsWith('-'))
                     {
-                        throw new FormatException($"There isn't a value after value flag '{currentToken}'.");
+                        throw new ArgumentParseException($"There isn't a value after value flag '{currentToken}'.");
                     }
 
                     object valueobj;
@@ -257,7 +256,7 @@ namespace ArgumentParserNS
                         }
                         catch
                         {
-                            throw new FormatException($"Value type doesn't match entered value for flag {currentToken}");
+                            throw new ArgumentParseException($"Value type of argument {strvalue} doesn't match entered value for flag {currentToken}");
                         }
                     }
                     else
@@ -273,7 +272,7 @@ namespace ArgumentParserNS
                     keyValuePair = new KeyValuePair<string, object>(current.dest, false);
                     break;
                 default:
-                    throw new ArgumentException("Flagged arguments can't be positional.");
+                    throw new ArgumentException("Flagged argument has ParserAction value other than dashed ParseActions, invalid creation of an argument was allowed.");
             }
             return keyValuePair;
         }
@@ -285,9 +284,16 @@ namespace ArgumentParserNS
                 switch (argument.parserAction)
                 {
                     case ParserAction.positional:
-                        if (argument.isRequired)
+                        if (argument.value == null) //if a default value wasn't provided
                         {
-                            throw new FormatException($"The positional argument {argument.flags[0]} was never given.");
+                            if (argument.hasToBeAddedToExpando)
+                            {
+                                throw new ArgumentParseException($"The positional argument {argument.flags[0]} was never given.");
+                            }
+                        }
+                        else
+                        {
+                            expando.TryAdd(argument.dest, argument.value);
                         }
                         break;
                     case ParserAction.take_value:
@@ -295,7 +301,7 @@ namespace ArgumentParserNS
                         {
                             if (argument.hasToBeAddedToExpando)
                             {
-                                throw new FormatException($"A value wasn't passed with the {argument.flags[0]} flag.");
+                                throw new ArgumentParseException($"A value wasn't passed with the {argument.flags[0]} flag.");
                             }
                         }
                         else
