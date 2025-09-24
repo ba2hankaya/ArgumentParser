@@ -1,6 +1,4 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
-using System.Dynamic;
+﻿using System.Dynamic;
 using System.Text.RegularExpressions;
 
 namespace ArgumentParserNS
@@ -208,7 +206,7 @@ namespace ArgumentParserNS
                     }
                     //no need to check for default value or value type compatibility since they aren't used while processing store_true or store_false arguments
                     //no need to check for nargs as well for the same reason
-        }
+                }
             }
         }
 
@@ -235,14 +233,39 @@ namespace ArgumentParserNS
 
                     if (current.nargs)
                     {
-                        List<string> strvalues = new List<string>();
-                        strvalues.Add(strvalue);
-                        while (i + 1 < inputArgs.Length && !inputArgs[i + 1].StartsWith("-"))
+                        List<object> objvalues = new List<object>();
+                        object tempObj;
+                        if(current.valueType != null)
                         {
-                            strvalues.Add(inputArgs[i + 1]);
-                            i++;
+                            try
+                            {
+                                tempObj = Convert.ChangeType(strvalue, current.valueType);
+                                objvalues.Add(tempObj);
+                                while (i + 1 < inputArgs.Length && !inputArgs[i + 1].StartsWith("-"))
+                                {
+                                    strvalue = inputArgs[i + 1];
+                                    tempObj = Convert.ChangeType(strvalue, current.valueType);
+                                    objvalues.Add(tempObj);
+                                    i++;
+                                }
+                            }
+                            catch
+                            {
+                                throw new ArgumentParseException($"Value type of argument {strvalue} doesn't match expected type({current.valueType.Name}) for flag {currentToken}.");
+                            }
                         }
-                        valueobj = strvalues;
+                        else
+                        {
+                            objvalues.Add(strvalue);
+                            while (i + 1 < inputArgs.Length && !inputArgs[i + 1].StartsWith("-"))
+                            {
+                                strvalue = inputArgs[i + 1];
+                                objvalues.Add(strvalue);
+                                i++;
+                            }
+                        }
+
+                        valueobj = objvalues;
                         keyValuePair = new KeyValuePair<string, object>(current.dest, valueobj);
                         break;
                     }
@@ -415,5 +438,5 @@ namespace ArgumentParserNS
         public ArgumentCreationException(string message) : base(message) { }
     }
 
-    
+
 }
