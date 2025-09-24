@@ -63,7 +63,7 @@ store_false: defaults to true, becomes false if the flag is present.
 
 #### 4. Arguments with nargs:
 
-Capture all consecutive values after the flag until another flag or the end of the array. Currently returned as a single string.
+Capture all consecutive values after the flag until another flag or the end of the array. Returned as a list of strings unless used with `WithType(<type>)`, in which case it will try to return a List<type>.
 
 ### Type conversion
 
@@ -75,7 +75,7 @@ If no conversion succeeds, the value remains a string.
 
 ### Storage and output
 
-Parsed values are stored in a Dictionary<string, object> using the argument’s dest as the key. The dictionary is then serialized to JSON and deserialized into a dynamic ExpandoObject, giving flexible access to values.
+Parsed values are stored in a ExpandoObject and returned as such for flexible and dynamic access to variables. Also ArgumentParser.HasProperty(ExpandoObject, string) helper method is available for ease of use.
 
 ## Lessons Learned
 
