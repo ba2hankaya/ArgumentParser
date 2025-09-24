@@ -230,7 +230,7 @@ namespace ArgumentParserTests
             dynamic expando = argparse.ArgParse("-f file1 file2 file3".Split());
 
 
-            string expected = "{\"files\":\"file1 file2 file3\"}";
+            string expected = "{\"files\":[\"file1\", \"file2\", \"file3\"]}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -250,7 +250,7 @@ namespace ArgumentParserTests
             dynamic expando = argparse.ArgParse("-f file1 file2 file3 -c 5".Split());
 
 
-            string expected = "{\"files\":\"file1 file2 file3\",\"c\":5}";
+            string expected = "{\"files\":[\"file1\", \"file2\", \"file3\"],\"c\":5}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
@@ -271,7 +271,27 @@ namespace ArgumentParserTests
             dynamic expando = argparse.ArgParse("posArg -f file1 file2 file3 -c 5".Split());
 
 
-            string expected = "{\"pos\":\"posArg\",\"files\":\"file1 file2 file3\",\"c\":5}";
+            string expected = "{\"pos\":\"posArg\",\"files\":[\"file1\", \"file2\", \"file3\"],\"c\":5}";
+            JObject expectedJson = JObject.Parse(expected);
+
+            string received = JsonConvert.SerializeObject(expando);
+            JObject receivedJson = JObject.Parse(received);
+
+            Assert.IsTrue(JToken.DeepEquals(expectedJson, receivedJson));
+        }
+
+        [TestMethod]
+        public void Nargs4()
+        {
+            ArgumentParser argparse = new ArgumentParser();
+            argparse.AddArgument("-n", "--numbers")
+                .WithNargs()
+                .WithType(typeof(int));
+
+            dynamic expando = argparse.ArgParse("-n 1 2 3 4 5".Split());
+
+
+            string expected = "{\"numbers\":[1,2,3,4,5]}";
             JObject expectedJson = JObject.Parse(expected);
 
             string received = JsonConvert.SerializeObject(expando);
