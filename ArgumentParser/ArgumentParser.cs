@@ -17,7 +17,7 @@ namespace ArgumentParserNS
         public ArgumentBuilder AddArgument(params string[] flags)
         {
             var arg = new Argument(flags);
-            args.Add(arg);
+            argumentObjectsForParsing.Add(arg);
             return new ArgumentBuilder(arg);
         }
         internal class Argument
@@ -27,8 +27,8 @@ namespace ArgumentParserNS
             public ParserAction parserAction = ParserAction.take_value;
             public Type? valueType = null;
             public Object? value = null;
-            public bool isRequired = false;
-            public bool isUserRequired = false;
+            public bool hasToBeAddedToExpando = false;
+            public bool isRequiredByUser = false;
             public bool nargs = false;
             string longFlagPattern = @"(^--)";
             string shortFlagPattern = @"(^-[^-])";
@@ -46,7 +46,7 @@ namespace ArgumentParserNS
                 {
                     if (!Regex.IsMatch(flag, longFlagPattern) && !Regex.IsMatch(flag, shortFlagPattern))
                     {
-                        throw new ArgumentException($"Flags must start with a dash or double dash.");
+                        throw new ArgumentCreationException($"Flags must start with a dash or double dash, if you wish to construct a positinal argument provide a single string with no dashes as the sole flag.");
                     }
                 }
                 foreach (string flag in flags)
@@ -72,6 +72,10 @@ namespace ArgumentParserNS
 
             public ArgumentBuilder WithParserAction(ParserAction action)
             {
+                if (_arg.parserAction == ParserAction.positional && action != ParserAction.positional)
+                {
+                    throw new ArgumentCreationException("Positional arguments constructed with a flag with no dashes cannot be converted to another parser action.");
+                }
                 _arg.parserAction = action;
                 return this;
             }
@@ -85,21 +89,13 @@ namespace ArgumentParserNS
             public ArgumentBuilder WithType(Type type)
             {
                 _arg.valueType = type;
-                if (_arg.value != null && _arg.valueType != null && _arg.value.GetType() != _arg.valueType)
-                {
-                    throw new ArgumentException($"Value type and default values don't match.");
-                }
                 return this;
             }
 
             public ArgumentBuilder WithDefault(object defaultVal)
             {
                 _arg.value = defaultVal;
-                if (_arg.value != null && _arg.valueType != null && defaultVal.GetType() != _arg.valueType)
-                {
-                    throw new ArgumentException($"Value type and default values don't match.");
-                }
-                _arg.isRequired = true;
+                _arg.hasToBeAddedToExpando = true;
                 return this;
             }
 
@@ -111,14 +107,14 @@ namespace ArgumentParserNS
 
             public ArgumentBuilder WithRequired()
             {
-                _arg.isRequired = true;
-                _arg.isUserRequired = true;
+                _arg.hasToBeAddedToExpando = true;
+                _arg.isRequiredByUser = true;
                 return this;
             }
         }
 
         string prog, desc, epilog;
-        List<Argument> args = new();
+        List<Argument> argumentObjectsForParsing = new();
         bool implementHelp;
         public ArgumentParser(string prog = "", string desc = "", string epilog = "", bool implementHelp = false)
         {
@@ -131,6 +127,8 @@ namespace ArgumentParserNS
 
         public ExpandoObject ArgParse(string[] inputArgs)
         {
+            ValidateArgumentObjects(argumentObjectsForParsing);
+
             if (implementHelp)
             {
                 Argument? helpArg = args.FirstOrDefault(x => x.flags.Contains("-h") || x.flags.Contains("--help"));
@@ -144,7 +142,7 @@ namespace ArgumentParserNS
             try
             {
                 ExpandoObject expando = new ExpandoObject();
-                List<Argument> argscpy = args.ToList();
+                List<Argument> argumentObjectsForParsingCopy = argumentObjectsForParsing.ToList();
                 for (int i = 0; i < inputArgs.Length; i++)
                 {
                     string currentToken = inputArgs[i].Trim();
@@ -158,7 +156,7 @@ namespace ArgumentParserNS
 
                     if (currentToken.StartsWith('-'))
                     {
-                        current = argscpy.FirstOrDefault(x => x.flags.Contains(currentToken));
+                        current = argumentObjectsForParsingCopy.FirstOrDefault(x => x.flags.Contains(currentToken));
                         if(current == null)
                         {
                             throw new FormatException($"Unrecognized flag: {currentToken}");
@@ -167,7 +165,7 @@ namespace ArgumentParserNS
                     }
                     else
                     {
-                        current = argscpy.FirstOrDefault(x => x.parserAction == ParserAction.positional);
+                        current = argumentObjectsForParsingCopy.FirstOrDefault(x => x.parserAction == ParserAction.positional);
                         if(current == null)
                         {
                             throw new FormatException($"Unexpected token: {currentToken}");
@@ -175,10 +173,10 @@ namespace ArgumentParserNS
                         keyValuePair = new KeyValuePair<string, object>(current.dest, currentToken);
                     }
                     expando.TryAdd(keyValuePair.Key, keyValuePair.Value);
-                    argscpy.Remove(current);
+                    argumentObjectsForParsingCopy.Remove(current);
                 }
 
-                HandleRemaining(argscpy, expando);
+                HandleRemaining(argumentObjectsForParsingCopy, expando);
                 return expando;
             }
             catch (Exception ex)
@@ -186,6 +184,32 @@ namespace ArgumentParserNS
                 ExpandoObject expando = new ExpandoObject();
                 expando.TryAdd("err_msg", ex.Message.ToString());
                 return expando;
+            }
+        }
+
+        private void ValidateArgumentObjects(List<Argument> arguments)
+        {
+            foreach(Argument argument in arguments)
+            {
+                if (argument.value != null && argument.valueType != null && argument.value.GetType() != argument.valueType)
+                {
+                    throw new ArgumentCreationException($"Argument {argument.dest}:Value type and default values don't match.");
+                }
+
+                if (argument.parserAction == ParserAction.positional && argument.nargs)
+                {
+                    throw new ArgumentCreationException($"Argument {argument.dest}:Positional arguments cannot have property nargs.");
+                }
+
+                if ((argument.parserAction == ParserAction.store_true || argument.parserAction == ParserAction.store_false))
+                {
+                    if (argument.isRequiredByUser)
+                    {
+                        throw new ArgumentCreationException($"Argument {argument.dest}: store_true and store_false arguments cannot be required from user. If they were, user would have to provide the argument everytime and they would only have values true and false, respectively.");
+                    }
+                    //no need to check for default value or value type compatibility since they aren't used while processing store_true or store_false arguments
+                    //no need to check for nargs as well for the same reason
+        }
             }
         }
 
@@ -269,7 +293,7 @@ namespace ArgumentParserNS
                     case ParserAction.take_value:
                         if (argument.value == null) //if a default value wasn't provided
                         {
-                            if (argument.isRequired)
+                            if (argument.hasToBeAddedToExpando)
                             {
                                 throw new FormatException($"A value wasn't passed with the {argument.flags[0]} flag.");
                             }
@@ -302,7 +326,7 @@ namespace ArgumentParserNS
             int requiredOptionsInitialLength = requiredOptions.Length;
             string options = "\noptions:\n";
             string epilogMessage = epilog == "" ? "" : $"\n{epilog}\n";
-            foreach (Argument arg in args)
+            foreach (Argument arg in argumentObjectsForParsing)
             {
                 switch (arg.parserAction)
                 {
@@ -320,7 +344,7 @@ namespace ArgumentParserNS
                 string flags = string.Join(", ", arg.flags);
                 if (arg.parserAction == ParserAction.positional)
                 {
-                    if (arg.isUserRequired)
+                    if (arg.isRequiredByUser)
                     {
                         requiredOptions += $"  {flags}\t{arg.help}\n";
                     }
@@ -331,7 +355,7 @@ namespace ArgumentParserNS
                 }
                 else
                 {
-                    if (arg.isUserRequired)
+                    if (arg.isRequiredByUser)
                     {
                         switch (arg.parserAction)
                         {
@@ -373,6 +397,16 @@ namespace ArgumentParserNS
         {
             return obj != null && ((IDictionary<String, object?>)obj).ContainsKey(propertyName);
         }
+    }
+
+    public class ArgumentParseException : Exception
+    {
+        public ArgumentParseException(string message) : base(message) { }
+    }
+
+    public class ArgumentCreationException : Exception
+    {
+        public ArgumentCreationException(string message) : base(message) { }
     }
 
     
