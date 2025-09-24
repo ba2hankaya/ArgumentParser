@@ -176,7 +176,7 @@ namespace ArgumentParserNS
                 HandleRemaining(argumentObjectsForParsingCopy, expando);
                 return expando;
             }
-            catch (Exception ex)
+            catch (ArgumentParseException ex)
             {
                 ExpandoObject expando = new ExpandoObject();
                 expando.TryAdd("err_msg", ex.Message.ToString());
@@ -295,7 +295,7 @@ namespace ArgumentParserNS
                     keyValuePair = new KeyValuePair<string, object>(current.dest, false);
                     break;
                 default:
-                    throw new ArgumentException("Flagged argument has ParserAction value other than dashed ParseActions, invalid creation of an argument was allowed.");
+                    throw new Exception("Flagged argument has ParserAction value other than dashed ParseActions, invalid creation of an argument was allowed.");
             }
             return keyValuePair;
         }
